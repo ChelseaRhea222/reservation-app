@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Restaurant Reservations</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #fafafa;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .app-container {
+            display: flex;
+            height: 100vh;
+        }
+
+        /* Left Panel */
+        .left-panel {
+            width: 320px;
+            background: white;
+            border-right: 1px solid #e0e0e0;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .panel-section {
+            padding: 24px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 16px;
+        }
+
+        .party-size-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+        }
+
+        .party-size-btn {
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .party-size-btn:hover {
+            border-color: #009688;
+            background: #f0f9f8;
+        }
+
+        .party-size-btn.selected {
+            border-color: #009688;
+            background: #009688;
+            color: white;
+        }
+
+        .date-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        .time-slots {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .time-slot {
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            text-align: center;
+            transition: all 0.2s;
+        }
+
+        .time-slot:hover {
+            border-color: #009688;
+            background: #f0f9f8;
+        }
+
+        .time-slot.selected {
+            border-color: #009688;
+            background: #009688;
+            color: white;
+        }
+
+        .time-slot.highlighted {
+            background: #fff3cd;
+        }
+
+        .time-slot.disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .area-filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .area-chip {
+            padding: 8px 16px;
+            border: 2px solid #e0e0e0;
+            background: white;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .area-chip:hover {
+            border-color: #009688;
+            background: #f0f9f8;
+        }
+
+        .area-chip.active {
+            border-color: #009688;
+            background: #009688;
+            color: white;
+        }
+
+        .area-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        /* Right Panel - Map */
+        .right-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #f5f5f5;
+        }
+
+        .map-container {
+            flex: 1;
+            position: relative;
+            overflow: auto;
+            padding: 40px;
+        }
+
+        .seat-map {
+            position: relative;
+            min-width: 800px;
+            min-height: 600px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .seat {
+            position: absolute;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 14px;
+            user-select: none;
+             width: 44px;
+  height: 44px;
+        }
+
+        .seat:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            z-index: 10;
+        }
+
+        .seat.available {
+            background: #009688;
+            color: white;
+            border: 3px solid #00796b;
+        }
+
+        .seat.selected {
+            background: #ffc107;
+            color: #333;
+            border: 3px solid #ffa000;
+        }
+
+        .seat.reserved {
+            background: #f44336;
+            color: white;
+            border: 3px solid #d32f2f;
+            cursor: not-allowed;
+        }
+
+        .seat.disabled {
+            background: #e0e0e0;
+            color: #999;
+            border: 3px solid #bdbdbd;
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        .seat.stool {
+            border-radius: 50%;
+        }
+
+        .seat.booth {
+            border-radius: 12px;
+        }
+
+        /* Action Bar */
+        .action-bar {
+            background: white;
+            border-top: 1px solid #e0e0e0;
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .action-info {
+            flex: 1;
+        }
+
+        .action-info-main {
+            font-size: 14px;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .action-info-sub {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .confirm-btn {
+            padding: 12px 24px;
+            background: #009688;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .confirm-btn:hover:not(:disabled) {
+            background: #00796b;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .confirm-btn:disabled {
+            background: #e0e0e0;
+            color: #999;
+            cursor: not-allowed;
+        }
+
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: #323232;
+            color: white;
+            padding: 16px 24px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            transition: transform 0.3s;
+            z-index: 1000;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* Loading Indicator */
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #009688;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+      .stool-svg {
+  width: 70%;
+  height: 70%;
+  object-fit: contain;
+  pointer-events: none;
+  display: block;
+}
+
+
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Left Panel -->
+        <div class="left-panel">
+            <!-- Party Size -->
+            <div class="panel-section">
+                <div class="section-title">Party Size</div>
+                <div class="party-size-grid" id="partySizeGrid"></div>
+            </div>
+
+            <!-- Date -->
+            <div class="panel-section">
+                <div class="section-title">Date</div>
+                <input type="date" id="dateInput" class="date-input">
+            </div>
+
+            <!-- Time -->
+            <div class="panel-section">
+                <div class="section-title">Time</div>
+                <div class="time-slots" id="timeSlots"></div>
+            </div>
+
+            <!-- Area Filter -->
+            <div class="panel-section">
+                <div class="section-title">Filter by Area</div>
+                <div class="area-filters" id="areaFilters"></div>
+            </div>
+        </div>
+
+        <!-- Right Panel -->
+        <div class="right-panel">
+            <div class="map-container">
+                <div class="seat-map" id="seatMap">
+                    <div class="loading" id="loading">
+                        <div class="spinner"></div>
+                        <div>Loading seats...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Bar -->
+            <div class="action-bar">
+                <div class="action-info">
+                    <div class="action-info-main" id="selectionInfo">Selected: None</div>
+                    <div class="action-info-sub" id="selectionDetails">Seats: 0 / Party: 2 • Select date and time</div>
+                </div>
+                <button class="confirm-btn" id="confirmBtn" disabled>
+                    <span>✓</span>
+                    <span>Confirm Reservation</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // ===================== CONFIGURATION =====================
+        const CONFIG = {
+            // Update these URLs to point to your backend
+            availabilityUrl: 'https://chelsea-rhea.com/api/availability.php',
+            reserveUrl: 'https://chelsea-rhea.com/api/reserve.php',
+            pollInterval: 2000, // Poll every 2 seconds
+            businessHours: { start: 15, end: 22 } // 3 PM to 10 PM
+        };
+
+        // ===================== STATE =====================
+        const state = {
+            partySize: 2,
+            selectedDate: new Date(),
+            selectedTime: null,
+            selectedSeats: new Set(),
+            seats: [],
+            areaFilters: new Set(['bar', 'dining', 'booth', 'hightop', 'outdoor']),
+            pollTimer: null
+        };
+
+        // ===================== AREA COLORS =====================
+        const AREA_COLORS = {
+            bar: '#2196F3',
+            dining: '#4CAF50',
+            booth: '#9C27B0',
+            hightop: '#FF9800',
+            outdoor: '#00BCD4'
+        };
+
+        // ===================== UTILITY FUNCTIONS =====================
+        function formatDateTime(date, time) {
+            if (!time) return 'Select date and time';
+            const d = `${pad(date.getMonth() + 1)}/${pad(date.getDate())}/${date.getFullYear()}`;
+            const h = time.hour % 12 === 0 ? 12 : time.hour % 12;
+            const m = pad(time.minute);
+            const am = time.hour >= 12 ? 'PM' : 'AM';
+            return `${d} • ${h}:${m} ${am}`;
+        }
+
+        function pad(num) {
+            return num.toString().padStart(2, '0');
+        }
+
+        function isSameDate(d1, d2) {
+            return d1.getFullYear() === d2.getFullYear() &&
+                   d1.getMonth() === d2.getMonth() &&
+                   d1.getDate() === d2.getDate();
+        }
+
+        function ceilToQuarterHour(date) {
+            const minute = date.getMinutes();
+            const remainder = minute % 15;
+            if (remainder === 0 && date.getSeconds() === 0) return date;
+            const add = 15 - remainder;
+            const newDate = new Date(date);
+            newDate.setMinutes(minute + add, 0, 0);
+            return newDate;
+        }
+
+        function isNearFuture(date, time) {
+            const dt = new Date(date.getFullYear(), date.getMonth(), date.getDate(), time.hour, time.minute);
+            const diff = dt - new Date();
+            return diff < 4 * 60 * 60 * 1000 && diff > 0; // 4 hours
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        // ===================== VALIDATION =====================
+        function allowedAreasForParty(partySize) {
+            if (partySize === 1) return new Set(['bar', 'hightop']);
+            if (partySize >= 2 && partySize <= 4) return new Set(['bar', 'dining', 'booth', 'hightop', 'outdoor']);
+            return new Set(['dining', 'booth', 'hightop']);
+        }
+
+        function seatAllowedForParty(seat, partySize) {
+            const allowedAreas = allowedAreasForParty(partySize);
+            if (!allowedAreas.has(seat.area)) return false;
+
+            if (partySize === 1) {
+                return seat.kind === 'stool';
+            }
+
+            if (partySize >= 2 && partySize <= 4) {
+                if (seat.area === 'outdoor') return true;
+                if (seat.kind === 'stool') return true;
+                return seat.capacity >= partySize;
+            }
+
+            return seat.kind !== 'stool' && seat.capacity >= partySize;
+        }
+
+        function validateSelection(partySize, seats) {
+            if (seats.length === 0) return 'Select seats to continue.';
+
+            const stools = seats.filter(s => s.kind === 'stool');
+            const nonStools = seats.filter(s => s.kind !== 'stool');
+
+            if (stools.length > 0 && nonStools.length > 0) {
+                return 'Pick either bar stools OR one table/booth (not both).';
+            }
+
+            if (partySize === 1) {
+                if (stools.length !== 1) return 'For party size 1, select exactly 1 bar stool.';
+                return null;
+            }
+
+            if (partySize >= 2 && partySize <= 4) {
+                if (stools.length > 0) {
+                    if (stools.length !== partySize) {
+                        return `Select exactly ${partySize} bar stools for a party of ${partySize}.`;
+                    }
+                    return null;
+                }
+
+                if (nonStools.length !== 1) return 'Select exactly 1 table/booth.';
+                if (nonStools[0].capacity < partySize) return 'That table/booth is too small.';
+                return null;
+            }
+
+            if (nonStools.length !== 1) return 'Select exactly 1 table/booth.';
+            if (nonStools[0].capacity < partySize) return 'That table/booth is too small.';
+            return null;
+        }
+
+        // ===================== API FUNCTIONS =====================
+        async function fetchSeats() {
+            try {
+                if (!state.selectedTime) return;
+
+                const dateTime = new Date(
+                    state.selectedDate.getFullYear(),
+                    state.selectedDate.getMonth(),
+                    state.selectedDate.getDate(),
+                    state.selectedTime.hour,
+                    state.selectedTime.minute
+                );
+
+                const params = new URLSearchParams({
+                    datetime: dateTime.toISOString(),
+                    party_size: state.partySize
+                });
+
+                const response = await fetch(`${CONFIG.availabilityUrl}?${params}`);
+                const data = await response.json();
+                
+                state.seats = data.map(parseSeat);
+                renderSeats();
+                updateActionBar();
+            } catch (error) {
+                console.error('Error fetching seats:', error);
+                showToast('Error loading seats');
+            }
+        }
+
+        function parseSeat(json) {
+            const availableForSelected = json.available_for_selected_time;
+            const status = availableForSelected !== undefined
+                ? (availableForSelected ? 'available' : 'reserved')
+                : (json.status || 'available').toLowerCase();
+
+            return {
+                id: json.id.toString(),
+                area: (json.area || 'dining').toLowerCase(),
+                kind: parseKind(json.kind),
+                capacity: json.capacity || 2,
+                x: json.x_pos || 10,
+                y: json.y_pos || 10,
+                size: json.size_val || 4,
+                rotation: json.rotation_deg || 0,
+                status: status
+            };
+        }
+
+        function parseKind(kind) {
+            const k = (kind || '').toLowerCase();
+            if (k === 'stool') return 'stool';
+            if (k.includes('round')) return 'tableRound';
+            if (k.includes('square')) return 'tableSquare';
+            if (k === 'booth') return 'booth';
+            return 'tableRound';
+        }
+
+        async function reserveSeats() {
+            try {
+                const dateTime = new Date(
+                    state.selectedDate.getFullYear(),
+                    state.selectedDate.getMonth(),
+                    state.selectedDate.getDate(),
+                    state.selectedTime.hour,
+                    state.selectedTime.minute
+                );
+
+                const response = await fetch(CONFIG.reserveUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        datetime: dateTime.toISOString(),
+                        party_size: state.partySize,
+                        seat_ids: Array.from(state.selectedSeats)
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    showToast(`Reserved ${state.selectedSeats.size} table(s) for ${formatDateTime(state.selectedDate, state.selectedTime)}`);
+                    state.selectedSeats.clear();
+                    fetchSeats();
+                } else {
+                    throw new Error(data.error || 'Reservation failed');
+                }
+            } catch (error) {
+                console.error('Error reserving seats:', error);
+                showToast('Could not reserve: ' + error.message);
+            }
+        }
+
+        // ===================== RENDER FUNCTIONS =====================
+        function renderPartySizeButtons() {
+            const grid = document.getElementById('partySizeGrid');
+            grid.innerHTML = '';
+            for (let i = 1; i <= 8; i++) {
+                const btn = document.createElement('button');
+                btn.className = 'party-size-btn';
+                btn.textContent = i;
+                if (i === state.partySize) btn.classList.add('selected');
+                btn.onclick = () => {
+                    state.partySize = i;
+                    state.selectedSeats.clear();
+                    renderPartySizeButtons();
+                    renderSeats();
+                    updateActionBar();
+                    renderAreaFilters();
+                    fetchSeats();
+                };
+                grid.appendChild(btn);
+            }
+        }
+
+        function renderTimeSlots() {
+            const container = document.getElementById('timeSlots');
+            container.innerHTML = '';
+
+            const now = new Date();
+            const start = new Date(state.selectedDate);
+            start.setHours(CONFIG.businessHours.start, 0, 0, 0);
+            const end = new Date(state.selectedDate);
+            end.setHours(CONFIG.businessHours.end, 0, 0, 0);
+
+            let earliest = start;
+            if (isSameDate(state.selectedDate, now)) {
+                const cutoff = new Date(now.getTime() + 60 * 60 * 1000); // 1 hour from now
+                earliest = ceilToQuarterHour(cutoff);
+                if (earliest < start) earliest = start;
+            }
+
+            const slots = [];
+            for (let t = new Date(earliest); t <= end; t = new Date(t.getTime() + 15 * 60 * 1000)) {
+                slots.push({ hour: t.getHours(), minute: t.getMinutes() });
+            }
+
+            slots.forEach(time => {
+                const btn = document.createElement('button');
+                btn.className = 'time-slot';
+                const h = time.hour % 12 === 0 ? 12 : time.hour % 12;
+                const m = pad(time.minute);
+                const am = time.hour >= 12 ? 'PM' : 'AM';
+                btn.textContent = `${h}:${m} ${am}`;
+
+                if (state.selectedTime?.hour === time.hour && state.selectedTime?.minute === time.minute) {
+                    btn.classList.add('selected');
+                }
+
+                if (isNearFuture(state.selectedDate, time)) {
+                    btn.classList.add('highlighted');
+                }
+
+                btn.onclick = () => {
+                    state.selectedTime = time;
+                    state.selectedSeats.clear();
+                    renderTimeSlots();
+                    fetchSeats();
+                    updateActionBar();
+                };
+
+                container.appendChild(btn);
+            });
+        }
+
+        function renderAreaFilters() {
+            const container = document.getElementById('areaFilters');
+            container.innerHTML = '';
+
+            const allowedAreas = allowedAreasForParty(state.partySize);
+            const areas = ['bar', 'dining', 'booth', 'hightop', 'outdoor'];
+
+            areas.forEach(area => {
+                const chip = document.createElement('button');
+                chip.className = 'area-chip';
+                if (!allowedAreas.has(area)) {
+                    chip.style.opacity = '0.3';
+                    chip.style.pointerEvents = 'none';
+                }
+                if (state.areaFilters.has(area)) {
+                    chip.classList.add('active');
+                }
+
+                const indicator = document.createElement('div');
+                indicator.className = 'area-indicator';
+                indicator.style.backgroundColor = AREA_COLORS[area];
+                chip.appendChild(indicator);
+
+                const text = document.createElement('span');
+                text.textContent = area.charAt(0).toUpperCase() + area.slice(1);
+                chip.appendChild(text);
+
+                chip.onclick = () => {
+                    if (state.areaFilters.has(area)) {
+                        state.areaFilters.delete(area);
+                    } else {
+                        state.areaFilters.add(area);
+                    }
+                    renderAreaFilters();
+                    renderSeats();
+                };
+
+                container.appendChild(chip);
+            });
+        }
+
+        function renderSeats() {
+            const map = document.getElementById('seatMap');
+            const loading = document.getElementById('loading');
+            
+            // Remove all existing seats
+            map.querySelectorAll('.seat').forEach(el => el.remove());
+
+            if (!state.selectedTime) {
+                loading.style.display = 'block';
+                loading.querySelector('div:last-child').textContent = 'Select date and time';
+                return;
+            }
+
+            loading.style.display = 'none';
+
+            const filteredSeats = state.seats.filter(seat => state.areaFilters.has(seat.area));
+
+            filteredSeats.forEach(seat => {
+                const el = document.createElement('div');
+                el.className = 'seat';
+            el.id = `seat-${seat.id}`;
+                if (seat.kind === 'stool') {
+            el.innerHTML = `<img src="/assets/icons/stool.svg" class="stool-svg">`;
+                } else {
+            el.textContent = seat.id;
+            }
+
+
+                // Position and size
+                const multiplier = 12; // Scale factor for positioning
+                el.style.left = `${seat.x * multiplier}px`;
+                el.style.top = `${seat.y * multiplier}px`;
+                el.style.width = `${seat.size * multiplier}px`;
+                el.style.height = `${seat.size * multiplier}px`;
+
+                if (seat.rotation !== 0) {
+                    el.style.transform = `rotate(${seat.rotation}deg)`;
+                }
+
+                // Style based on kind
+                if (seat.kind === 'stool') el.classList.add('stool');
+                if (seat.kind === 'booth') el.classList.add('booth');
+
+                // Status
+                const isAllowed = seatAllowedForParty(seat, state.partySize);
+                const isSelected = state.selectedSeats.has(seat.id);
+
+                if (isSelected) {
+                    el.classList.add('selected');
+                } else if (seat.status === 'reserved' || !isAllowed) {
+                    el.classList.add(seat.status === 'reserved' ? 'reserved' : 'disabled');
+                } else {
+                    el.classList.add('available');
+                }
+
+                // Click handler
+                if (isAllowed && seat.status === 'available') {
+                    el.onclick = () => {
+                        if (state.selectedSeats.has(seat.id)) {
+                            state.selectedSeats.delete(seat.id);
+                        } else {
+                            state.selectedSeats.add(seat.id);
+                        }
+                        renderSeats();
+                        updateActionBar();
+                    };
+                }
+
+                map.appendChild(el);
+            });
+        }
+
+        function updateActionBar() {
+            const selectedSeats = state.seats.filter(s => state.selectedSeats.has(s.id));
+            const selectedCapacity = selectedSeats.reduce((sum, s) => sum + s.capacity, 0);
+
+            const infoMain = document.getElementById('selectionInfo');
+            const infoSub = document.getElementById('selectionDetails');
+            const confirmBtn = document.getElementById('confirmBtn');
+
+            if (selectedSeats.length === 0) {
+                infoMain.textContent = 'Selected: None';
+            } else {
+                infoMain.textContent = `Selected: ${selectedSeats.map(s => s.id).join(', ')}`;
+            }
+
+            infoSub.textContent = `Seats: ${selectedCapacity} / Party: ${state.partySize} • ${formatDateTime(state.selectedDate, state.selectedTime)}`;
+
+            const error = validateSelection(state.partySize, selectedSeats);
+            confirmBtn.disabled = error !== null;
+
+            if (error && selectedSeats.length > 0) {
+                infoSub.textContent += ` • ${error}`;
+            }
+        }
+
+        // ===================== INITIALIZATION =====================
+        function init() {
+            // Set initial date
+            const dateInput = document.getElementById('dateInput');
+            dateInput.value = state.selectedDate.toISOString().split('T')[0];
+            dateInput.min = new Date().toISOString().split('T')[0];
+            dateInput.onchange = (e) => {
+                state.selectedDate = new Date(e.target.value + 'T00:00:00');
+                state.selectedSeats.clear();
+                renderTimeSlots();
+                fetchSeats();
+                updateActionBar();
+            };
+
+            // Render initial UI
+            renderPartySizeButtons();
+            renderTimeSlots();
+            renderAreaFilters();
+            updateActionBar();
+
+            // Confirm button
+            document.getElementById('confirmBtn').onclick = reserveSeats;
+
+            // Start polling
+            state.pollTimer = setInterval(() => {
+                if (state.selectedTime) {
+                    fetchSeats();
+                }
+            }, CONFIG.pollInterval);
+        }
+
+        // Start the app
+        init();
+    </script>
+</body>
+</html>

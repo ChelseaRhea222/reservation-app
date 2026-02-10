@@ -92,15 +92,7 @@ Everything runs from ONE file.
 
 ------------------------------------------------------------------------
 
-# Setup
-
-## 1. Clone repo
-
-git clone https://github.com/yourname/restaurant-reservation-app.git
-
-cd restaurant-reservation-app
-
-## 2. Update API endpoints
+## Update API endpoints
 
 Inside reservation_app.html:
 

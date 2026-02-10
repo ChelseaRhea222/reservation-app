@@ -14,13 +14,13 @@
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             background: #fafafa;
-            height: 100vh;
-            overflow: hidden;
+            min-height: 100vh;
+            overflow: auto;
         }
 
         .app-container {
             display: flex;
-            height: 100vh;
+            min-height: 100vh;
         }
 
         /* Left Panel */
@@ -31,6 +31,7 @@
             display: flex;
             flex-direction: column;
             overflow-y: auto;
+            flex-shrink: 0;
         }
 
         .panel-section {
@@ -166,23 +167,81 @@
             display: flex;
             flex-direction: column;
             background: #f5f5f5;
+            min-height: 0;
         }
 
         .map-container {
-            flex: 1;
+            flex: 1 1 auto;
             position: relative;
             overflow: auto;
-            padding: 40px;
+            padding: 16px;
+            min-height: 0;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+
+            background: #f5f5f5;
         }
 
-        .seat-map {
-            position: relative;
-            min-width: 800px;
-            min-height: 600px;
+        .seat-map-frame {
+            width: 1400px;
+            height: 900px;
             background: white;
             border-radius: 12px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
         }
+        .seat-map {
+            position: relative;
+            width: 1400px;
+            height: 900px;
+            transform-origin: top left;
+        }
+        @media (max-width: 700px) {
+            .app-container {
+                flex-direction: column;
+                height: auto;
+                min-height: 100vh;
+            }
+            .left-panel {
+                width: 100%;
+                max-height: 45vh;
+            }
+            .right-panel {
+                flex: 1;
+            }
+            .action-bar {
+                order: 0;
+            }
+            .map-container {
+                order: 1;
+            }
+        }
+        /* ===================== FLOORPLAN ZONES (visual only) ===================== */
+        .zone{
+            position:absolute;
+            background:#efefef;
+            border:2px solid #bdbdbd;
+            border-radius:6px;
+            font-size:13px;
+            font-weight:600;
+            color:#333;
+            display:flex;
+            align-items:flex-start;
+            justify-content:center;
+            padding-top:6px;
+            z-index:1; /* behind seats */
+            pointer-events:none;
+        }
+
+        /* Layout matches provided mockup */
+        .zone.kitchen { left:70px; top:80px;  width:170px; height:220px; }
+        .zone.bar     { left:360px; top:122px;  width:400px; height:32px; }
+        .zone.hightop { left:260px; top:200px; width:550px; height:145px; }
+        .zone.dining  { left:140px;  top:350px; width:670px; height:285px; }
+        .zone.booth   { left:892px; top:90px; width:90px; height:590px; }
+        .zone.outdoor { left:1050px; top:90px; width:90px; height:590px; }
+
 
         .seat {
             position: absolute;
@@ -197,6 +256,7 @@
             user-select: none;
              width: 44px;
   height: 44px;
+            z-index: 5; /* above zones */
         }
 
         .seat:hover {
@@ -239,6 +299,9 @@
         .seat.booth {
             border-radius: 12px;
         }
+        .seat.hightop {
+            border-radius: 6px;
+        }
 
         /* Action Bar */
         .action-bar {
@@ -248,6 +311,7 @@
             display: flex;
             align-items: center;
             gap: 16px;
+            flex-shrink: 0;
         }
 
         .action-info {
@@ -317,6 +381,7 @@
             left: 50%;
             transform: translate(-50%, -50%);
             text-align: center;
+            z-index: 50;
         }
 
         .spinner {
@@ -376,10 +441,20 @@
         <!-- Right Panel -->
         <div class="right-panel">
             <div class="map-container">
-                <div class="seat-map" id="seatMap">
+                <div class="seat-map-frame" id="seatMapFrame">
+                    <div class="seat-map" id="seatMap">
+                    <!-- ===================== FLOORPLAN ZONES (visual only) ===================== -->
+                    <div class="zone kitchen">Kitchen</div>
+                    <div class="zone bar">Bar</div>
+                    <div class="zone hightop">Hightop</div>
+                    <div class="zone dining">Dining</div>
+                    <div class="zone booth">Booth</div>
+                    <div class="zone outdoor">Patio</div>
+
                     <div class="loading" id="loading">
                         <div class="spinner"></div>
                         <div>Loading seats...</div>
+                    </div>
                     </div>
                 </div>
             </div>
@@ -410,6 +485,7 @@
             pollInterval: 2000, // Poll every 2 seconds
             businessHours: { start: 15, end: 22 } // 3 PM to 10 PM
         };
+        const MAP_BASE = { width: 1400, height: 900 };
 
         // ===================== STATE =====================
         const state = {
@@ -472,6 +548,27 @@
             toast.textContent = message;
             toast.classList.add('show');
             setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        function updateMapScale() {
+            const map = document.getElementById('seatMap');
+            const frame = document.getElementById('seatMapFrame');
+            const container = map.closest('.map-container');
+            const rightPanel = map.closest('.right-panel');
+            const actionBar = document.querySelector('.action-bar');
+            if (!container || !rightPanel || !actionBar || !frame) return;
+
+            const cs = getComputedStyle(container);
+            const padX = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0);
+            const padY = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0);
+
+            const availableW = Math.max(0, container.clientWidth - padX);
+            const availableH = Math.max(0, container.clientHeight - padY);
+            const scale = Math.min(1, availableW / MAP_BASE.width, availableH / MAP_BASE.height);
+
+            map.style.transform = `scale(${scale})`;
+            frame.style.width = `${MAP_BASE.width * scale}px`;
+            frame.style.height = `${MAP_BASE.height * scale}px`;
         }
 
         // ===================== VALIDATION =====================
@@ -766,10 +863,27 @@
 
                 // Position and size
                 const multiplier = 12; // Scale factor for positioning
+                let sizeW = seat.size;
+                let sizeH = seat.size;
+
+                if (seat.area === 'hightop') {
+                    sizeW = seat.size * 0.8;
+                    sizeH = seat.size * 0.8;
+                }
+
+                if (seat.kind === 'stool') {
+                    sizeW = seat.size * 0.70;
+                    sizeH = seat.size * 0.70;
+                }
+
+                if (seat.kind === 'booth') {
+                    sizeW = seat.size * 1.4; // wider
+                    sizeH = seat.size * 0.8; // shorter
+                }
                 el.style.left = `${seat.x * multiplier}px`;
                 el.style.top = `${seat.y * multiplier}px`;
-                el.style.width = `${seat.size * multiplier}px`;
-                el.style.height = `${seat.size * multiplier}px`;
+                el.style.width = `${sizeW * multiplier}px`;
+                el.style.height = `${sizeH * multiplier}px`;
 
                 if (seat.rotation !== 0) {
                     el.style.transform = `rotate(${seat.rotation}deg)`;
@@ -778,6 +892,7 @@
                 // Style based on kind
                 if (seat.kind === 'stool') el.classList.add('stool');
                 if (seat.kind === 'booth') el.classList.add('booth');
+                if (seat.area === 'hightop') el.classList.add('hightop');
 
                 // Status
                 const isAllowed = seatAllowedForParty(seat, state.partySize);
@@ -851,6 +966,8 @@
             renderTimeSlots();
             renderAreaFilters();
             updateActionBar();
+            updateMapScale();
+            window.addEventListener('resize', updateMapScale);
 
             // Confirm button
             document.getElementById('confirmBtn').onclick = reserveSeats;

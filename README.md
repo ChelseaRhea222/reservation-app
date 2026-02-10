@@ -97,8 +97,8 @@ Everything runs from ONE file.
 Inside reservation_app.html:
 
 const CONFIG = { availabilityUrl:
-'https://yourdomain.com/api/availability.php', reserveUrl:
-'https://yourdomain.com/api/reserve.php' };
+'https://chelsea-rhea.com/api/availability.php', reserveUrl:
+'https://chelsea-rhea.com/api/reserve.php' };
 
 ## 3. Run
 
